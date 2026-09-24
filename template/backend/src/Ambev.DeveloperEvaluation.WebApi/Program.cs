@@ -40,7 +40,11 @@ public class Program
 
             builder.RegisterDependencies();
 
-            builder.Services.AddAutoMapper(typeof(Program).Assembly, typeof(ApplicationLayer).Assembly);
+            builder.Services.AddAutoMapper(
+                _ => { },
+                typeof(Program).Assembly,
+                typeof(ApplicationLayer).Assembly
+            );
 
             builder.Services.AddMediatR(cfg =>
             {
