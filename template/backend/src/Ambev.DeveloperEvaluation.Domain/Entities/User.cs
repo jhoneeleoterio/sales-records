@@ -69,14 +69,6 @@ public class User : BaseEntity, IUser
     string IUser.Role => Role.ToString();
 
     /// <summary>
-    /// Initializes a new instance of the User class.
-    /// </summary>
-    public User()
-    {
-        CreatedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
     /// Performs validation of the user entity using the UserValidator rules.
     /// </summary>
     /// <returns>
