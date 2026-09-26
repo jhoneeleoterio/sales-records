@@ -66,29 +66,36 @@ public class SaleRepositoryTests
     }
 
     /// <summary>
-    /// Filters sales by product and confirms that only sales containing that product are returned.
+    /// Inserts a realistic volume of sales and confirms that the product filter returns only its matching sale.
     /// </summary>
     [Fact]
-    public async Task GetAllAsync_WithProductFilter_ShouldReturnMatchingSales()
+    public async Task GetAllAsync_WithProductFilter_AmidOneThousandSales_ShouldReturnMatchingSale()
     {
         var database = new IntegrationDatabase();
 
         await using var context = await database.CreateAsync();
         var repository = new SaleRepository(context);
-        var firstSale = SaleIntegrationTestData.GenerateValidSale();
+        var backgroundSales = Enumerable.Range(0, 999)
+            .Select(_ => SaleIntegrationTestData.GenerateValidSale())
+            .ToList();
 
-        await repository.CreateAsync(firstSale);
+        await context.Sales.AddRangeAsync(backgroundSales);
+        await context.SaveChangesAsync();
+
+        var matchingSale = SaleIntegrationTestData.GenerateValidSale();
+
+        await repository.CreateAsync(matchingSale);
         context.ChangeTracker.Clear();
 
-        var productId = firstSale.Items.First().ProductId;
+        var productId = matchingSale.Items.First().ProductId;
         var (sales, totalCount) = await repository.GetAllAsync(
             1,
             10,
             new SaleFilter(ProductId: productId));
 
-        Assert.True(totalCount >= 1);
-        Assert.Contains(sales, sale => sale.Id == firstSale.Id);
-        Assert.All(sales, sale => Assert.Contains(sale.Items, item => item.ProductId == productId));
+        Assert.Equal(1, totalCount);
+        var sale = Assert.Single(sales);
+        Assert.Equal(matchingSale.Id, sale.Id);
     }
 
     /// <summary>
