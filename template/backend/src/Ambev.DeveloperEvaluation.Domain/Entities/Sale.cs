@@ -60,7 +60,57 @@ public class Sale: BaseEntity
     {
         Status = SaleStatus.Cancelled;
         UpdatedAt = DateTime.UtcNow;
-    } 
+    }
+
+    public void Update(
+        Guid? customerId,
+        string? customerName,
+        Guid? branchId,
+        string? branchName,
+        List<SaleItem>? items)
+    {
+        if (customerId.HasValue != (customerName is not null))
+        {
+            throw new DomainException("Customer ID and customer name must be updated together.");
+        }
+
+        if (branchId.HasValue != (branchName is not null))
+        {
+            throw new DomainException("Branch ID and branch name must be updated together.");
+        }
+
+        if (customerId.HasValue)
+        {
+            if (customerId == Guid.Empty) throw new DomainException("Customer ID is required.");
+            if (string.IsNullOrWhiteSpace(customerName)) throw new DomainException("Customer Name is required.");
+
+            CustomerId = customerId.Value;
+            CustomerName = customerName;
+        }
+
+        if (branchId.HasValue)
+        {
+            if (branchId == Guid.Empty) throw new DomainException("Branch ID is required.");
+            if (string.IsNullOrWhiteSpace(branchName)) throw new DomainException("Branch Name is required.");
+
+            BranchId = branchId.Value;
+            BranchName = branchName;
+        }
+
+        if (items is not null)
+        {
+            if (items.Count < 1) throw new DomainException("At least one item is required.");
+
+            _items.Clear();
+            _items.AddRange(items);
+
+            Quantity = items.Sum(item => item.Quantity);
+            Discount = items.Sum(item => item.Discount);
+            TotalAmount = items.Sum(item => item.TotalAmount);
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
 public class SaleItem
@@ -127,7 +177,10 @@ public class SaleItem
             _ => 0m
         };
 
-        return quantity * unitPrice * discountRate;
+        return Math.Round(
+            quantity * unitPrice * discountRate,
+            2,
+            MidpointRounding.AwayFromZero);
     }
 
     private static decimal CalculateTotalAmount(
@@ -135,7 +188,10 @@ public class SaleItem
         decimal unitPrice,
         decimal discount)
     {
-        return quantity * unitPrice - discount;
+        return Math.Round(
+            quantity * unitPrice - discount,
+            2,
+            MidpointRounding.AwayFromZero);
     }
 
 }

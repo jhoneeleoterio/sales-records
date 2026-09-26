@@ -75,3 +75,130 @@ This section includes links to the detailed documentation for the different API 
 This section describes the overall structure and organization of the project files and directories. 
 
 See [Project Structure](/.doc/project-structure.md)
+
+## Implemented Sales API
+
+The Sales API implements the complete CRUD flow, plus a separate cancellation action:
+
+| Method | Route | Description |
+| --- | --- | --- |
+| `POST` | `/api/Sale` | Creates a sale and calculates discounts and totals. |
+| `GET` | `/api/Sale/{id}` | Returns one sale with its items. |
+| `GET` | `/api/Sale?_page=1&_size=10` | Returns a paginated list of sales. |
+| `PATCH` | `/api/Sale/{id}` | Partially updates a sale. Fields not sent remain unchanged. |
+| `PATCH` | `/api/Sale/{id}/cancel` | Cancels a sale. |
+| `DELETE` | `/api/Sale/{id}` | Permanently removes a sale and its items. |
+
+Sales store customer, branch and product identifiers together with their descriptions. These are external identities, so the Sales domain has no navigation properties or foreign keys to those external domains.
+
+### Running locally
+
+#### Prerequisites
+
+- .NET SDK 8.0 or later
+- Docker and Docker Compose
+
+From the repository root, enter the backend directory:
+
+```bash
+cd template/backend
+```
+
+Start the PostgreSQL containers used by the application and the integration tests:
+
+```bash
+docker compose up -d ambev.developerevaluation.database ambev.developerevaluation.database.test
+```
+
+Run the API:
+
+```bash
+dotnet run --project src/Ambev.DeveloperEvaluation.WebApi
+```
+
+When running with the `Development` environment, the API automatically applies pending migrations during startup. No separate `dotnet ef` command is necessary.
+
+To use another PostgreSQL instance, override the connection string through a standard .NET environment variable:
+
+```bash
+export ConnectionStrings__DefaultConnection='Host=localhost;Port=5432;Database=sales_records;Username=sales_user;Password=change-me'
+```
+
+The same variable is honored by the API and EF Core migrations. Configure `Jwt__SecretKey` in the same manner when running outside local development. In the default HTTPS launch profile, Swagger is available at `https://localhost:7181/swagger`.
+
+### Running tests
+
+From `template/backend`:
+
+```bash
+dotnet restore
+dotnet test Ambev.DeveloperEvaluation.sln --no-restore
+```
+
+Integration and functional tests require the test PostgreSQL container started in the previous section.
+
+## Sales API examples
+
+Set the API base URL and use a generated identifier after creating a sale:
+
+```bash
+export API_URL='https://localhost:7181'
+export SALE_ID='<sale-id-returned-by-the-create-request>'
+```
+
+For local HTTPS development, the examples use `-k` to accept the development certificate.
+
+### Create a sale
+
+```bash
+curl -k -X POST "$API_URL/api/Sale" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customerId": "11111111-1111-1111-1111-111111111111",
+    "customerName": "Sample Customer",
+    "branchId": "22222222-2222-2222-2222-222222222222",
+    "branchName": "Main Branch",
+    "items": [
+      {
+        "productId": "33333333-3333-3333-3333-333333333333",
+        "productName": "Notebook",
+        "unitPrice": 100.00,
+        "quantity": 4
+      }
+    ]
+  }'
+```
+
+### Get one sale or list sales
+
+```bash
+curl -k "$API_URL/api/Sale/$SALE_ID"
+curl -k "$API_URL/api/Sale?_page=1&_size=10&status=NotCancelled&_order=createdAt%20desc,totalAmount%20asc"
+```
+
+The list accepts exact filters for `number`, `customerId`, `branchId`, `productId` and `status`. It also accepts ranges through `_minTotalAmount`, `_maxTotalAmount`, `_minCreatedAt` and `_maxCreatedAt`. The `_order` value accepts `number`, `createdAt` or `totalAmount`, optionally followed by `asc` or `desc`; separate multiple criteria with commas.
+
+### Partially update a sale
+
+Only fields included in the body are changed. Customer and branch are external identities, so each one must always be sent as its complete `Id` + `Name` pair. Providing `items` replaces the complete item collection and recalculates the sale aggregates.
+
+```bash
+curl -k -X PATCH "$API_URL/api/Sale/$SALE_ID" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customerId": "44444444-4444-4444-4444-444444444444",
+    "customerName": "Updated Customer"
+  }'
+```
+
+### Cancel a sale
+
+```bash
+curl -k -X PATCH "$API_URL/api/Sale/$SALE_ID/cancel"
+```
+
+### Delete a sale
+
+```bash
+curl -k -X DELETE "$API_URL/api/Sale/$SALE_ID"
+```

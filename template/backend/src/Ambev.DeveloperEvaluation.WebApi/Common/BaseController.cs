@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using FluentValidation.Results;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Common;
 
@@ -20,16 +21,20 @@ public class BaseController : ControllerBase
         base.CreatedAtRoute(routeName, routeValues, new ApiResponseWithData<T> { Data = data, Success = true });
 
     protected IActionResult BadRequest(string message) =>
-        base.BadRequest(new ApiResponse { Message = message, Success = false });
+        base.BadRequest(ApiErrorResponse.Validation([message]));
+
+    protected IActionResult BadRequest(IEnumerable<ValidationFailure> failures) =>
+        base.BadRequest(ApiErrorResponse.Validation(failures.Select(failure => failure.ErrorMessage)));
 
     protected IActionResult NotFound(string message = "Resource not found") =>
-        base.NotFound(new ApiResponse { Message = message, Success = false });
+        base.NotFound(ApiErrorResponse.NotFound(message));
 
     protected IActionResult OkPaginated<T>(PaginatedList<T> pagedList) =>
-            Ok(new PaginatedResponse<T>
+            base.Ok(new PaginatedResponse<T>
             {
                 Data = pagedList,
                 CurrentPage = pagedList.CurrentPage,
+                PageSize = pagedList.PageSize,
                 TotalPages = pagedList.TotalPages,
                 TotalCount = pagedList.TotalCount,
                 Success = true
