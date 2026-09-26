@@ -21,6 +21,10 @@
     </PackageReference>
     <PackageReference Include="Bogus" Version="35.6.1" />
     <PackageReference Include="NSubstitute" Version="5.1.0" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+      <None Update="appsettings.Integration.json">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
   </ItemGroup>
 
   <ItemGroup>

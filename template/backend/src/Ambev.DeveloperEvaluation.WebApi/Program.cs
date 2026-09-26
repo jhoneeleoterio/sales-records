@@ -6,7 +6,9 @@ using Ambev.DeveloperEvaluation.Common.Validation;
 using Ambev.DeveloperEvaluation.IoC;
 using Ambev.DeveloperEvaluation.ORM;
 using Ambev.DeveloperEvaluation.WebApi.Middleware;
+using Ambev.DeveloperEvaluation.WebApi.Common;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -23,7 +25,13 @@ public class Program
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
             builder.AddDefaultLogging();
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .ConfigureApiBehaviorOptions(options =>
+                    options.InvalidModelStateResponseFactory = context =>
+                        new BadRequestObjectResult(ApiErrorResponse.Validation(
+                            context.ModelState.Values
+                                .SelectMany(value => value.Errors)
+                                .Select(error => error.ErrorMessage))));
             builder.Services.AddEndpointsApiExplorer();
 
             builder.AddBasicHealthChecks();
@@ -61,6 +69,10 @@ public class Program
 
             if (app.Environment.IsDevelopment())
             {
+                using var scope = app.Services.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<DefaultContext>();
+                context.Database.Migrate();
+
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }

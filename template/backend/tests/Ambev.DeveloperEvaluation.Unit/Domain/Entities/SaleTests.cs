@@ -144,4 +144,47 @@ public class SaleTests
         Assert.Equal(SaleStatus.Cancelled, sale.Status);
         Assert.NotNull(sale.UpdatedAt);
     }
+
+    [Fact]
+    public void Update_WithReplacementItems_ShouldRecalculateSaleAggregates()
+    {
+        var data = SaleTestData.GenerateValidData();
+        var sale = Sale.Create(
+            data.CustomerId,
+            data.CustomerName,
+            data.BranchId,
+            data.BranchName,
+            data.Items);
+
+        var items = new List<SaleItem>
+        {
+            SaleItem.Create(Guid.NewGuid(), "Notebook", 100m, 4),
+            SaleItem.Create(Guid.NewGuid(), "Mouse", 50m, 2)
+        };
+
+        sale.Update(data.CustomerId, "Cliente Atualizado", null, null, items);
+
+        Assert.Equal("Cliente Atualizado", sale.CustomerName);
+        Assert.Equal(6, sale.Quantity);
+        Assert.Equal(40m, sale.Discount);
+        Assert.Equal(460m, sale.TotalAmount);
+        Assert.Equal(2, sale.Items.Count);
+        Assert.NotNull(sale.UpdatedAt);
+    }
+
+    [Fact]
+    public void Update_WithOnlyCustomerId_ShouldThrowDomainException()
+    {
+        var data = SaleTestData.GenerateValidData();
+        var sale = Sale.Create(
+            data.CustomerId,
+            data.CustomerName,
+            data.BranchId,
+            data.BranchName,
+            data.Items);
+
+        var action = () => sale.Update(Guid.NewGuid(), null, null, null, null);
+
+        Assert.Throws<DomainException>(action);
+    }
 }
