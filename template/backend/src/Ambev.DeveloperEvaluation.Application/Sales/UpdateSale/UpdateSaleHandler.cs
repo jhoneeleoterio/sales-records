@@ -1,3 +1,4 @@
+using Ambev.DeveloperEvaluation.Application.Events;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using MediatR;
@@ -5,7 +6,9 @@ using OneOf;
 
 namespace Ambev.DeveloperEvaluation.Application.Sales.UpdateSale;
 
-public sealed class UpdateSaleHandler(ISaleRepository repository)
+public sealed class UpdateSaleHandler(
+    ISaleRepository repository,
+    IDomainEventDispatcher domainEventDispatcher)
     : IRequestHandler<UpdateSaleCommand, OneOf<UpdateSaleResult, SaleNotFoundResult>>
 {
     public async Task<OneOf<UpdateSaleResult, SaleNotFoundResult>> Handle(
@@ -35,6 +38,9 @@ public sealed class UpdateSaleHandler(ISaleRepository repository)
             items);
 
         await repository.UpdateAsync(sale, cancellationToken);
+        var domainEvents = sale.DomainEvents.ToArray();
+        await domainEventDispatcher.DispatchAsync(domainEvents, cancellationToken);
+        sale.ClearDomainEvents();
 
         return new UpdateSaleResult(sale.Id, sale.UpdatedAt);
     }
