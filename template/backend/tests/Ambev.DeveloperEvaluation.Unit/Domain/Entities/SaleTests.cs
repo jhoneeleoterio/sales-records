@@ -1,5 +1,6 @@
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Unit.Domain.Entities.TestData;
 using Xunit;
 
@@ -143,6 +144,7 @@ public class SaleTests
 
         Assert.Equal(SaleStatus.Cancelled, sale.Status);
         Assert.NotNull(sale.UpdatedAt);
+        Assert.Contains(sale.DomainEvents, domainEvent => domainEvent is SaleCancelledEvent);
     }
 
     [Fact]
@@ -170,6 +172,7 @@ public class SaleTests
         Assert.Equal(460m, sale.TotalAmount);
         Assert.Equal(2, sale.Items.Count);
         Assert.NotNull(sale.UpdatedAt);
+        Assert.Contains(sale.DomainEvents, domainEvent => domainEvent is SaleUpdatedEvent);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using Ambev.DeveloperEvaluation.Domain.Common;
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 
 namespace Ambev.DeveloperEvaluation.Domain.Entities;
 
@@ -40,6 +41,7 @@ public class Sale: BaseEntity
         
         Sale sale = new()
         {
+            Id = Guid.NewGuid(),
             CustomerId = customerId,
             CustomerName = customerName,
             BranchId = branchId,
@@ -52,6 +54,7 @@ public class Sale: BaseEntity
         
         // Add SaleItems
         sale._items.AddRange(items);
+        sale.AddDomainEvent(new SaleCreatedEvent(sale.Id, sale.CreatedAt));
                 
         return sale;
     }
@@ -60,6 +63,7 @@ public class Sale: BaseEntity
     {
         Status = SaleStatus.Cancelled;
         UpdatedAt = DateTime.UtcNow;
+        AddDomainEvent(new SaleCancelledEvent(Id, UpdatedAt.Value));
     }
 
     public void Update(
@@ -110,6 +114,7 @@ public class Sale: BaseEntity
         }
 
         UpdatedAt = DateTime.UtcNow;
+        AddDomainEvent(new SaleUpdatedEvent(Id, UpdatedAt.Value));
     }
 }
 
