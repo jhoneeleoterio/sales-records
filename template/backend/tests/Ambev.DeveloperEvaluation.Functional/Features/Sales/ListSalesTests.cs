@@ -38,7 +38,8 @@ public class ListSalesTests : IClassFixture<FunctionalWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         Assert.NotNull(createdContent);
 
-        var response = await _client.GetAsync("/api/Sale?_page=1&_size=10");
+        var response = await _client.GetAsync(
+            $"/api/Sale?_page=1&_size=10&customerId={command.CustomerId}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
