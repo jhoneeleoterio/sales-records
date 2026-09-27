@@ -3,6 +3,7 @@ using Ambev.DeveloperEvaluation.Common.HealthChecks;
 using Ambev.DeveloperEvaluation.Common.Logging;
 using Ambev.DeveloperEvaluation.Common.Security;
 using Ambev.DeveloperEvaluation.Common.Validation;
+using Ambev.DeveloperEvaluation.Domain.Repositories;
 using Ambev.DeveloperEvaluation.IoC;
 using Ambev.DeveloperEvaluation.ORM;
 using Ambev.DeveloperEvaluation.WebApi.Middleware;
@@ -12,12 +13,13 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Ambev.DeveloperEvaluation.WebApi.Seed;
 
 namespace Ambev.DeveloperEvaluation.WebApi;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         try
         {
@@ -77,7 +79,9 @@ public class Program
             {
                 using var scope = app.Services.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<DefaultContext>();
-                context.Database.Migrate();
+                await context.Database.MigrateAsync();
+                var saleRepository = scope.ServiceProvider.GetRequiredService<ISaleRepository>();
+                await DevelopmentDataSeeder.SeedAsync(context, saleRepository);
 
                 app.UseSwagger();
                 app.UseSwaggerUI();
@@ -92,11 +96,12 @@ public class Program
 
             app.MapControllers();
 
-            app.Run();
+            await app.RunAsync();
         }
         catch (Exception ex)
         {
             Log.Fatal(ex, "Application terminated unexpectedly");
+            throw;
         }
         finally
         {

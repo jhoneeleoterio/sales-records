@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using Ambev.DeveloperEvaluation.Application.Events.Outbox;
+using Ambev.DeveloperEvaluation.Application.Events.Integration;
 using Ambev.DeveloperEvaluation.Messaging.Rebus;
 using Ambev.DeveloperEvaluation.ORM.Outbox;
 
@@ -24,6 +25,10 @@ public class InfrastructureModuleInitializer : IModuleInitializer
         if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
         {
             builder.Services.AddRabbitMqMessaging(builder.Configuration);
+        }
+        else
+        {
+            builder.Services.AddSingleton<IIntegrationEventPublisher, RabbitMqDisabledIntegrationEventPublisher>();
         }
     }
 }

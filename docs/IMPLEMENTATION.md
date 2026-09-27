@@ -116,7 +116,21 @@ docker compose up -d ambev.developerevaluation.database
 dotnet run --project src/Ambev.DeveloperEvaluation.WebApi
 ```
 
-The API applies pending migrations automatically in the `Development` environment. With the default `http` launch profile, Swagger is available at [http://localhost:5119/swagger](http://localhost:5119/swagger).
+The default configuration targets the development database at `localhost:5432` (`developer_evaluation`). The API applies pending migrations automatically in the `Development` environment. On an empty database, it also adds three sample sales (including one cancelled sale) so the list, detail and filter endpoints can be tried immediately. The seed is idempotent and runs only in `Development`; it does not run in functional or integration test databases. Seeded sales use the same repository flow as API requests, so their events are persisted in the Outbox and can be published after RabbitMQ is enabled. With the default `http` launch profile, Swagger is available at [http://localhost:5119/swagger](http://localhost:5119/swagger).
+
+If the same terminal was previously used to run the worker against the test database, clear its environment overrides before using the default configuration:
+
+**Bash**
+
+```bash
+unset ConnectionStrings__DefaultConnection RabbitMq__Enabled RabbitMq__ConnectionString RabbitMq__InputQueue
+```
+
+**PowerShell**
+
+```powershell
+Remove-Item Env:ConnectionStrings__DefaultConnection, Env:RabbitMq__Enabled, Env:RabbitMq__ConnectionString, Env:RabbitMq__InputQueue -ErrorAction SilentlyContinue
+```
 
 For hot reload, replace the last command with:
 
@@ -137,11 +151,20 @@ The test database is isolated from the application database and is exposed local
 
 ## Custom configuration
 
-The default Compose setup is sufficient for local development. For another PostgreSQL instance or a non-development environment, use standard .NET environment variables without editing tracked files:
+The default Compose setup is sufficient for local development. For another PostgreSQL instance or a non-development environment, use standard .NET environment variables without editing tracked files.
+
+**Bash**
 
 ```bash
 export ConnectionStrings__DefaultConnection='Host=<host>;Port=5432;Database=<database>;Username=<user>;Password=<password>'
 export Jwt__SecretKey='<secret-with-at-least-32-characters>'
+```
+
+**PowerShell**
+
+```powershell
+$env:ConnectionStrings__DefaultConnection = 'Host=<host>;Port=5432;Database=<database>;Username=<user>;Password=<password>'
+$env:Jwt__SecretKey = '<secret-with-at-least-32-characters>'
 ```
 
 Environment variables use `__` to represent nested configuration sections. RabbitMQ-specific variables are shown in the Outbox section below.
@@ -150,13 +173,9 @@ Environment variables use `__` to represent nested configuration sections. Rabbi
 
 Manual migration application is useful for controlled environments where the application must not change the database schema during startup.
 
-```bash
+```text
 dotnet tool install --global dotnet-ef --version 8.*
-
-dotnet ef database update \
-  --project src/Ambev.DeveloperEvaluation.ORM \
-  --startup-project src/Ambev.DeveloperEvaluation.WebApi \
-  --context DefaultContext
+dotnet ef database update --project src/Ambev.DeveloperEvaluation.ORM --startup-project src/Ambev.DeveloperEvaluation.WebApi --context DefaultContext
 ```
 
 ## Events, Outbox, and RabbitMQ
@@ -167,19 +186,42 @@ Creating, updating, or cancelling a sale registers `SaleCreated`, `SaleUpdated`,
 
 RabbitMQ is optional and disabled by default. When enabled, `OutboxPublisherHostedService` checks for pending Outbox records every five seconds. It publishes an `IntegrationEventEnvelope` through the Application output port, whose implementation uses Rebus with RabbitMQ. Failed messages remain pending and are retried with exponential backoff.
 
+### Development seed and Outbox
+
+On the first run against an empty development database, the API creates three sample sales: two active and one cancelled. The seed uses `ISaleRepository`, the same persistence flow used by the API, and commits the complete sample data in one transaction.
+
+This creates four pending Outbox messages:
+
+- Three `SaleCreated` messages, one for each sample sale.
+- One `SaleCancelled` message for the cancelled sample sale.
+
+When RabbitMQ is disabled, the worker does not start and these messages remain pending in `OutboxMessages`. If RabbitMQ is enabled on a later API startup, the worker reads and publishes them. A message is marked as processed only after its publication succeeds. The seed is idempotent: once at least one sale exists, it does not create sales or messages again.
+
 ### Run the Outbox worker with RabbitMQ
 
 The worker runs inside the Web API process; it is not a separate executable.
 
-```bash
-docker compose up -d \
-  ambev.developerevaluation.database \
-  ambev.developerevaluation.rabbitmq
+```text
+docker compose up -d ambev.developerevaluation.database ambev.developerevaluation.rabbitmq
+```
 
+**Bash**
+
+```bash
 export RabbitMq__Enabled=true
 export RabbitMq__ConnectionString='amqp://guest:guest@localhost:5672'
 export RabbitMq__InputQueue='sales-records'
+```
 
+**PowerShell**
+
+```powershell
+$env:RabbitMq__Enabled = 'true'
+$env:RabbitMq__ConnectionString = 'amqp://guest:guest@localhost:5672'
+$env:RabbitMq__InputQueue = 'sales-records'
+```
+
+```text
 dotnet run --project src/Ambev.DeveloperEvaluation.WebApi
 ```
 
@@ -189,16 +231,29 @@ The management UI of the local Compose container is available at [http://localho
 
 The broker does not access PostgreSQL. The API worker reads the `OutboxMessages` table, so point the API at the test database when this is the intended environment:
 
-```bash
-docker compose up -d \
-  ambev.developerevaluation.database.test \
-  ambev.developerevaluation.rabbitmq
+```text
+docker compose up -d ambev.developerevaluation.database.test ambev.developerevaluation.rabbitmq
+```
 
+**Bash**
+
+```bash
 export ConnectionStrings__DefaultConnection='Host=localhost;Port=5433;Database=<test-database>;Username=<user>;Password=<password>'
 export RabbitMq__Enabled=true
 export RabbitMq__ConnectionString='amqp://guest:guest@localhost:5672'
 export RabbitMq__InputQueue='sales-records-test'
+```
 
+**PowerShell**
+
+```powershell
+$env:ConnectionStrings__DefaultConnection = 'Host=localhost;Port=5433;Database=<test-database>;Username=<user>;Password=<password>'
+$env:RabbitMq__Enabled = 'true'
+$env:RabbitMq__ConnectionString = 'amqp://guest:guest@localhost:5672'
+$env:RabbitMq__InputQueue = 'sales-records-test'
+```
+
+```text
 dotnet watch run --project src/Ambev.DeveloperEvaluation.WebApi
 ```
 
