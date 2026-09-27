@@ -42,6 +42,14 @@ services:
       - "5433:5432"
     restart: unless-stopped
 
+  ambev.developerevaluation.rabbitmq:
+    container_name: ambev_developer_evaluation_rabbitmq
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+
   ambev.developerevaluation.nosql:
     container_name: ambev_developer_evaluation_nosql 
     image: mongo:8.0    

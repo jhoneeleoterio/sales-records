@@ -3,8 +3,11 @@ using Ambev.DeveloperEvaluation.Integration.TestData;
 using Ambev.DeveloperEvaluation.Domain.Enums;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
+using Ambev.DeveloperEvaluation.Domain.Events;
+using Ambev.DeveloperEvaluation.ORM.Outbox;
 using Ambev.DeveloperEvaluation.ORM.Repositories;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Xunit;
 
 namespace Ambev.DeveloperEvaluation.Integration.Repositories;
@@ -14,6 +17,32 @@ namespace Ambev.DeveloperEvaluation.Integration.Repositories;
 /// </summary>
 public class SaleRepositoryTests
 {
+    /// <summary>
+    /// Persists the sale creation event in the outbox within the same database transaction.
+    /// </summary>
+    [Fact]
+    public async Task CreateAsync_ShouldPersistSaleCreatedEventInOutbox()
+    {
+        var database = new IntegrationDatabase();
+
+        await using var context = await database.CreateAsync();
+        var repository = new SaleRepository(context);
+        var sale = SaleIntegrationTestData.GenerateValidSale();
+
+        await repository.CreateAsync(sale);
+        context.ChangeTracker.Clear();
+
+        var outboxMessage = await context.OutboxMessages
+            .SingleAsync(message => message.EventId == sale.DomainEvents.Single().EventId);
+
+        var domainEvent = JsonSerializer.Deserialize<SaleCreatedEvent>(outboxMessage.Payload);
+
+        Assert.Equal(typeof(SaleCreatedEvent).FullName, outboxMessage.Type);
+        Assert.NotNull(domainEvent);
+        Assert.Equal(outboxMessage.EventId, domainEvent.EventId);
+        Assert.Equal(sale.Id, domainEvent.SaleId);
+    }
+
     /// <summary>
     /// Persists a sale with owned items and confirms that all aggregate values are stored in the database.
     /// </summary>

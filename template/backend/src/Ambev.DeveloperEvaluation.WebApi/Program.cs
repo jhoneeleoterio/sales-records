@@ -7,6 +7,7 @@ using Ambev.DeveloperEvaluation.IoC;
 using Ambev.DeveloperEvaluation.ORM;
 using Ambev.DeveloperEvaluation.WebApi.Middleware;
 using Ambev.DeveloperEvaluation.WebApi.Common;
+using Ambev.DeveloperEvaluation.WebApi.HostedServices;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,11 @@ public class Program
             builder.Services.AddJwtAuthentication(builder.Configuration);
 
             builder.RegisterDependencies();
+
+            if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
+            {
+                builder.Services.AddHostedService<OutboxPublisherHostedService>();
+            }
 
             builder.Services.AddAutoMapper(
                 _ => { },

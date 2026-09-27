@@ -5,4 +5,5 @@ namespace Ambev.DeveloperEvaluation.Domain.Events;
 /// </summary>
 public interface IDomainEvent
 {
+    Guid EventId { get; }
 }
