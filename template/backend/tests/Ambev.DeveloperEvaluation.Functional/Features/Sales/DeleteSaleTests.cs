@@ -12,7 +12,8 @@ namespace Ambev.DeveloperEvaluation.Functional.Features.Sales;
 /// <summary>
 /// Verifies the HTTP contract for permanently deleting sales.
 /// </summary>
-public class DeleteSaleTests : IClassFixture<FunctionalWebApplicationFactory>
+[Collection(FunctionalTestsCollection.Name)]
+public class DeleteSaleTests
 {
     private readonly HttpClient _client;
 

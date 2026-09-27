@@ -13,7 +13,8 @@ namespace Ambev.DeveloperEvaluation.Functional.Features.Sales;
 /// <summary>
 /// Verifies the HTTP contract for partially updating sales.
 /// </summary>
-public class UpdateSaleTests : IClassFixture<FunctionalWebApplicationFactory>
+[Collection(FunctionalTestsCollection.Name)]
+public class UpdateSaleTests
 {
     private readonly HttpClient _client;
 

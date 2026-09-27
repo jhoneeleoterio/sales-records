@@ -11,7 +11,8 @@ namespace Ambev.DeveloperEvaluation.Functional.Features.Sales;
 /// <summary>
 /// Verifies the HTTP contract for creating sales.
 /// </summary>
-public class CreateSaleTests : IClassFixture<FunctionalWebApplicationFactory>
+[Collection(FunctionalTestsCollection.Name)]
+public class CreateSaleTests
 {
     private readonly HttpClient _client;
 

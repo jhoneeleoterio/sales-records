@@ -12,7 +12,8 @@ namespace Ambev.DeveloperEvaluation.Functional.Features.Sales;
 /// <summary>
 /// Verifies the HTTP contract for paginated sales listing.
 /// </summary>
-public class ListSalesTests : IClassFixture<FunctionalWebApplicationFactory>
+[Collection(FunctionalTestsCollection.Name)]
+public class ListSalesTests
 {
     private readonly HttpClient _client;
 

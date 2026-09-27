@@ -12,7 +12,8 @@ namespace Ambev.DeveloperEvaluation.Functional.Features.Sales;
 /// <summary>
 /// Verifies the HTTP contract for retrieving a sale by identifier.
 /// </summary>
-public class GetSaleTests : IClassFixture<FunctionalWebApplicationFactory>
+[Collection(FunctionalTestsCollection.Name)]
+public class GetSaleTests
 {
     private readonly HttpClient _client;
 

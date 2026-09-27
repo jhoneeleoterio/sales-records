@@ -13,7 +13,8 @@ namespace Ambev.DeveloperEvaluation.Functional.Features.Sales;
 /// <summary>
 /// Verifies the HTTP contract for cancelling sales.
 /// </summary>
-public class CancelSaleTests : IClassFixture<FunctionalWebApplicationFactory>
+[Collection(FunctionalTestsCollection.Name)]
+public class CancelSaleTests
 {
     private readonly HttpClient _client;
 
