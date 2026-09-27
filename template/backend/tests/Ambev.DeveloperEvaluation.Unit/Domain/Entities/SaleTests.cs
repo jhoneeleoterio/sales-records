@@ -26,6 +26,7 @@ public class SaleTests
         Assert.Equal(data.BranchName, sale.BranchName);
         Assert.Equal(SaleStatus.NotCancelled, sale.Status);
         Assert.Single(sale.Items);
+        Assert.Contains(sale.DomainEvents, domainEvent => domainEvent is SaleCreatedEvent);
         Assert.All(data.Items, item =>
             Assert.Contains(item, sale.Items));
     }

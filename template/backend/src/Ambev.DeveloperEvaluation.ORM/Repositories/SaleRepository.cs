@@ -1,5 +1,6 @@
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
+using Ambev.DeveloperEvaluation.ORM.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ambev.DeveloperEvaluation.ORM.Repositories;
@@ -15,7 +16,7 @@ public class SaleRepository(DefaultContext context) : ISaleRepository
     public async Task<Sale> CreateAsync(Sale sale, CancellationToken cancellationToken = default)
     {
         await context.Sales.AddAsync(sale, cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
+        await SaveWithOutboxAsync(sale, cancellationToken);
         
         return sale;
     }
@@ -165,7 +166,7 @@ public class SaleRepository(DefaultContext context) : ISaleRepository
             throw new InvalidOperationException("The sale must be tracked before it can be updated.");
         }
 
-        await context.SaveChangesAsync(cancellationToken);
+        await SaveWithOutboxAsync(sale, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -177,6 +178,24 @@ public class SaleRepository(DefaultContext context) : ISaleRepository
         }
 
         context.Sales.Remove(sale);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SaveWithOutboxAsync(
+        Sale sale,
+        CancellationToken cancellationToken)
+    {
+        var persistedEventIds = context.ChangeTracker
+            .Entries<OutboxMessage>()
+            .Select(entry => entry.Entity.EventId)
+            .ToHashSet();
+
+        var messages = sale.DomainEvents
+            .Where(domainEvent => !persistedEventIds.Contains(domainEvent.EventId))
+            .Select(OutboxMessage.Create)
+            .ToList();
+
+        await context.OutboxMessages.AddRangeAsync(messages, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
     }
 }
