@@ -28,7 +28,20 @@ public class InfrastructureModuleInitializer : IModuleInitializer
         }
         else
         {
-            builder.Services.AddSingleton<IIntegrationEventPublisher, RabbitMqDisabledIntegrationEventPublisher>();
+            builder.Services.AddSingleton<IIntegrationEventPublisher, DisabledIntegrationEventPublisher>();
+        }
+    }
+
+    private sealed class DisabledIntegrationEventPublisher : IIntegrationEventPublisher
+    {
+        public Task PublishAsync(
+            IntegrationEventEnvelope integrationEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return Task.FromException(new InvalidOperationException(
+                "RabbitMQ publishing is disabled. Enable RabbitMq:Enabled before processing outbox messages."));
         }
     }
 }
